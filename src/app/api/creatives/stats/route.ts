@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     // 2. Fetch Ad Spend por Anuncio
     const { data: spendData, error: sError } = await supabase
       .from('ad_spend')
-      .select('ad_id, ad_name, thumbnail_url, spend, impressions, clicks')
+      .select('ad_id, ad_name, thumbnail_url, spend, impresiones, clicks')
       .gte('created_at', startDate.toISOString())
       .lte('created_at', end ? new Date(end).toISOString() : now.toISOString());
 
@@ -70,16 +70,16 @@ export async function GET(req: Request) {
         };
       }
       const cr = creativesMap[s.ad_id];
-      cr.spend += Number(s.spend);
-      cr.impressions += Number(s.impressions);
-      cr.clicks += Number(s.clicks);
+      cr.spend += Number(s.spend) || 0;
+      cr.impressions += Number(s.impresiones) || 0;
+      cr.clicks += Number(s.clicks) || 0;
     });
 
     purchaseData?.forEach(p => {
       if (p.status !== 'APPROVED') return;
       const cr = creativesMap[p.ad_id];
       if (cr) {
-        cr.revenue += Number(p.amount);
+        cr.revenue += Number(p.amount) || 0;
         cr.ventas += 1;
       }
     });

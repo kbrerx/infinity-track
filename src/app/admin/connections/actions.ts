@@ -58,7 +58,6 @@ export async function updatePixel(id: string, domain_filter: string) {
   revalidatePath('/admin/connections');
   return { success: true };
 }
-
 // Acciones para Integraciones (Marketplace)
 export async function addIntegration(formData: FormData) {
   const name = formData.get('name') as string;
@@ -87,3 +86,13 @@ export async function deleteIntegration(id: string) {
 
 // Alias para compatibilidad parcial (si se requiere)
 export const deleteConnection = deleteAdAccount;
+
+export async function getAdAccounts() {
+  const { data, error } = await supabase
+    .from('meta_ad_accounts')
+    .select('id, name, ad_account_id')
+    .eq('is_active', true);
+
+  if (error) return { error: error.message };
+  return { data };
+}
