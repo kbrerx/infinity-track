@@ -64,24 +64,6 @@ export default function FilterBar({ onFilterChange }: FilterBarProps) {
         </div>
       </div>
 
-      {range === 'custom' && (
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl animate-in fade-in slide-in-from-left-2">
-          <input 
-            type="date" 
-            className="bg-transparent text-[10px] font-bold text-white outline-none [color-scheme:dark]" 
-            value={customStart}
-            onChange={(e) => setCustomStart(e.target.value)}
-          />
-          <span className="text-muted-foreground text-[10px]">-</span>
-          <input 
-            type="date" 
-            className="bg-transparent text-[10px] font-bold text-white outline-none [color-scheme:dark]"
-            value={customEnd}
-            onChange={(e) => setCustomEnd(e.target.value)}
-          />
-        </div>
-      )}
-
       <div className="h-6 w-[1px] bg-white/10 mx-1 hidden sm:block" />
 
       <button className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-transparent hover:border-white/10">

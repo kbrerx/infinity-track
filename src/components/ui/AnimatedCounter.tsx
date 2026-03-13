@@ -1,7 +1,7 @@
 "use client";
 
-import { useSpring, useTransform, motion } from "framer-motion";
-import { useEffect } from "react";
+import { useSpring, useMotionValue, useTransform, motion } from "framer-motion";
+import { useEffect, useRef } from "react";
 
 interface AnimatedCounterProps {
   value: number;
