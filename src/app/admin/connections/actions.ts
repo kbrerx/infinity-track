@@ -84,3 +84,6 @@ export async function deleteIntegration(id: string) {
   revalidatePath('/admin/connections');
   return { success: true };
 }
+
+// Alias para compatibilidad con componentes antiguos/huérfanos
+export const deleteConnection = deleteAdAccount;
