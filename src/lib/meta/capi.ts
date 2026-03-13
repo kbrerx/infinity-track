@@ -3,10 +3,36 @@ import crypto from 'crypto';
 const PIXEL_ID = process.env.META_PIXEL_ID;
 const ACCESS_TOKEN = process.env.META_ACCESS_TOKEN;
 
+// Meta CAPI requires SHA-256 hashing for PII data
 function hashData(data: string | undefined): string | null {
   if (!data) return null;
   const cleanData = data.trim().toLowerCase();
   return crypto.createHash('sha256').update(cleanData).digest('hex');
+}
+
+interface MetaEventParams {
+  eventName: string;
+  eventTime: number; // Unix timestamp in seconds
+  eventId?: string;
+  pixelId?: string;
+  accessToken?: string;
+  userData: {
+    email?: string;
+    phone?: string;
+    firstName?: string;
+    lastName?: string;
+    ip?: string;
+    userAgent?: string;
+    fbc?: string;
+    fbp?: string;
+    country?: string;
+  };
+  customData?: {
+    value?: number;
+    currency?: string;
+    orderId?: string;
+    contentName?: string;
+  };
 }
 
 export async function sendEventToMetaCAPI({ 
@@ -15,7 +41,9 @@ export async function sendEventToMetaCAPI({
   customData, 
   pixelId, 
   accessToken, 
-  eventId
+  eventId,
+  eventTime: passedEventTime,
+  eventSourceUrl
 }: {
   eventName: string;
   userData: any;
@@ -23,18 +51,23 @@ export async function sendEventToMetaCAPI({
   pixelId?: string;
   accessToken?: string;
   eventId?: string;
+  eventTime?: number;
+  eventSourceUrl?: string;
 }) {
-  const eventTime = Date.now();
+  const eventTime = passedEventTime || Date.now();
   const targetPixelId = pixelId || PIXEL_ID;
   const targetAccessToken = accessToken || ACCESS_TOKEN;
 
-  if (!targetPixelId || !targetAccessToken) return null;
+  if (!targetPixelId || !targetAccessToken) {
+    console.warn('Meta CAPI: Missing Pixel ID or Access Token');
+    return null;
+  }
 
   const payload = {
     data: [
       {
         event_name: eventName,
-        event_time: Math.floor(eventTime / 1000),
+        event_time: Math.floor(eventTime / 1000), // Convert to seconds
         event_id: eventId,
         action_source: 'website',
         user_data: {
@@ -64,8 +97,11 @@ export async function sendEventToMetaCAPI({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    return await response.json();
+
+    const result = await response.json();
+    return result;
   } catch (error) {
+    console.error('Meta CAPI Request Error:', error);
     return { error };
   }
 }

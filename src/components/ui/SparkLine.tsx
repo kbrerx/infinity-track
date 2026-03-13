@@ -13,7 +13,7 @@ export function SparkLine({ data, color = "hsl(263.4,70%,60%)", height = 40, wid
   if (!data || data.length < 2) return null;
 
   const min = Math.min(...data);
-  const max = Math.max(...max);
+  const max = Math.max(...data);
   const range = max - min || 1;
 
   const points = data.map((d, i) => {
