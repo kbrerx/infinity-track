@@ -112,17 +112,6 @@ export default function Navbar() {
                   );
                 })}
               </div>
-              <div className="p-4 border-t border-white/[0.06]">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 p-[1px]">
-                    <div className="w-full h-full bg-black/70 rounded-[6px] flex items-center justify-center text-[10px] font-black text-white">BB</div>
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold">Bryan B.</p>
-                    <p className="text-[10px] text-muted-foreground">Agencia Infinity</p>
-                  </div>
-                </div>
-              </div>
             </motion.div>
           </>
         )}

@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from "framer-motion";
-import { Calendar, ChevronDown, Filter, LayoutGrid, Package, Share2 } from "lucide-react";
+import { Calendar, ChevronDown, LayoutGrid, Package } from "lucide-react";
 import { useState } from "react";
 
 export type TimeRange = 'today' | 'yesterday' | '7d' | '30d' | 'month' | 'custom';
