@@ -1,15 +1,13 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { sendToCapi } from '@/lib/meta/capi';
 
 export async function POST(req: Request) {
   try {
     const hottokHeader = req.headers.get('x-hotmart-hottok');
-
     // 1. SEGURIDAD: Validar el Token de Hotmart dinámicamente
     const { data: activeIntegration } = await supabase
       .from('integrations')
-      .select('id, config')
+      .select('id')
       .eq('type', 'hotmart')
       .eq('is_active', true)
       .contains('config', { hottok: hottokHeader })
@@ -23,77 +21,138 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json();
-    const event = body.event;
-    const data = body.data;
+    const payload = await req.json();
+    const { event, data } = payload;
 
-    // Solo procesar compras (PURCHASE) y reembolsos por ahora
-    if (event !== 'PURCHASE_APPROVED' && event !== 'PURCHASE_OUT_OF_BALANCE' && event !== 'PURCHASE_CANCELED' && event !== 'PURCHASE_REFUNDED') {
-      return NextResponse.json({ received: true, ignored: true });
+    // Solo procesamos eventos relevantes para el dinero o el tracking
+    const trackedEvents = [
+      'PURCHASE_APPROVED', 
+      'PURCHASE_REFUNDED', 
+      'PURCHASE_CHARGEBACK', 
+      'PURCHASE_CANCELED'
+    ];
+
+    if (!trackedEvents.includes(event)) {
+      return NextResponse.json({ message: 'Event ignored' }, { status: 200 });
     }
 
-    const { buyer, product, purchase, attribution } = data;
+    const { purchase, buyer, product } = data;
+    const { transaction, status, price, origin, buyer_ip } = purchase;
+    const { sck, src } = origin || {};
 
-    // Estructura para Supabase
-    const saleData = {
-      hotmart_sale_item_id: purchase.transaction,
+    // 2. Registro inicial de la venta (Garantizar 100% de conteo)
+    const purchaseData: any = {
+      transaction_id: transaction,
       event_type: event,
-      amount: purchase.price.value,
-      currency: purchase.price.currency_code,
       product_name: product.name,
-      buyer_email: buyer.email,
+      amount: price.value,
+      currency: price.currency_value,
       buyer_name: buyer.name,
-      checkout_id: purchase.checkout_country?.iso_code,
-      utm_source: attribution.source,
-      utm_medium: attribution.medium,
-      utm_campaign: attribution.campaign,
-      utm_content: attribution.content,
-      src: attribution.src,
-      pixel_id: purchase.pixel_id, // Importante para CAPI
-      status: purchase.status,
-      created_at: new Date(purchase.approved_date || purchase.order_date).toISOString(),
+      buyer_email: buyer.email,
+      buyer_phone: buyer.checkout_phone,
+      buyer_country: buyer.address?.country_iso,
+      h_sck: sck,
+      h_src: src,
+      ip_address: buyer_ip,
+      status: status,
+      raw_data: payload
     };
 
-    // 2. Guardar en Base de Datos
-    const { error: dbError } = await supabase
-      .from('sales')
-      .upsert([saleData], { onConflict: 'hotmart_sale_item_id' });
-
-    if (dbError) throw dbError;
-
-    // 3. Enviar a Meta CAPI si hay un Pixel ID
-    if (saleData.pixel_id) {
-       // Buscar el token dinámico en la tabla meta_pixels
-       const { data: pixelConfig } = await supabase
-         .from('meta_pixels')
-         .select('access_token')
-         .eq('pixel_id', saleData.pixel_id)
-         .maybeSingle();
-
-       if (pixelConfig?.access_token) {
-          await sendToCapi({
-            eventName: event === 'PURCHASE_APPROVED' ? 'Purchase' : 'Refund',
-            pixelId: saleData.pixel_id,
-            accessToken: pixelConfig.access_token,
-            userData: {
-              email: buyer.email,
-              name: buyer.name,
-              // Hotmart no siempre envía fbc/fbp en el webhook, pero si los tenemos en la venta los usamos
-            },
-            customData: {
-              value: saleData.amount,
-              currency: saleData.currency,
-              content_name: saleData.product_name,
-              transaction_id: purchase.transaction
-            },
-            eventSourceUrl: `https://${req.headers.get('host')}/checkout`,
-          });
-       }
+    // 3. ATRIBUCIÓN (Memoria de Elefante) - Solo para compras aprobadas (ventas)
+    let attributionData = null;
+    if (event === 'PURCHASE_APPROVED' && sck) {
+      const { data: eventMatch } = await supabase
+        .from('events')
+        .select('visitor_id, fbc, fbp, user_agent, utm_source, utm_medium, utm_campaign, utm_content, utm_term, pixel_id, campaign_id, adset_id, ad_id')
+        .eq('visitor_id', sck)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (eventMatch) attributionData = eventMatch;
     }
 
-    return NextResponse.json({ success: true });
+    // Si encontramos match, enriquecemos la compra
+    if (attributionData) {
+      Object.assign(purchaseData, {
+        visitor_id: attributionData.visitor_id,
+        fbc: attributionData.fbc,
+        fbp: attributionData.fbp,
+        user_agent: attributionData.user_agent,
+        utm_source: attributionData.utm_source,
+        utm_medium: attributionData.utm_medium,
+        utm_campaign: attributionData.utm_campaign,
+        utm_content: attributionData.utm_content,
+        utm_term: attributionData.utm_term,
+        pixel_id: attributionData.pixel_id,
+        campaign_id: attributionData.campaign_id,
+        adset_id: attributionData.adset_id,
+        ad_id: attributionData.ad_id
+      });
+    }
+
+    // Fallback: si no hay match pero hay 'src' de Hotmart, guardamos el src como utm_campaign (o podemos parsearlo)
+    if (!purchaseData.utm_campaign && src) {
+      purchaseData.utm_campaign = src; 
+    }
+
+    // Guardar o actualizar la compra en Supabase (maneja reembolsos actualizando el registro)
+    const { error } = await supabase
+      .from('purchases')
+      .upsert([purchaseData], { onConflict: 'transaction_id' });
+
+    if (error) {
+      console.error('Error saving purchase:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // 4. ENVÍO A META CAPI (Solo para compras aprobadas)
+    if (event === 'PURCHASE_APPROVED' && purchaseData.pixel_id) {
+      // Intentar obtener el token dinámico de la base de datos para este pixel
+      const { data: pixelConfig } = await supabase
+        .from('meta_pixels')
+        .select('access_token')
+        .eq('pixel_id', purchaseData.pixel_id)
+        .maybeSingle();
+
+      const { sendEventToMetaCAPI } = await import('@/lib/meta/capi');
+      
+      await sendEventToMetaCAPI({
+        eventName: 'Purchase',
+        eventTime: Date.now(),
+        eventId: transaction,
+        pixelId: purchaseData.pixel_id,
+        accessToken: pixelConfig?.access_token || process.env.META_ACCESS_TOKEN, // Dinámico > Fallback Env
+        userData: {
+          email: buyer.email,
+          phone: buyer.checkout_phone,
+          ip: buyer_ip,
+          userAgent: purchaseData.user_agent,
+          fbc: purchaseData.fbc,
+          fbp: purchaseData.fbp,
+          country: buyer.address?.country_iso
+        },
+        customData: {
+          value: price.value,
+          currency: price.currency_value,
+          orderId: transaction,
+          contentName: product.name
+        }
+      }).catch(err => console.error('Error sending Purchase CAPI:', err));
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      event: event,
+      attributed: !!attributionData 
+    }, { status: 201 });
   } catch (error: any) {
     console.error('Hotmart Webhook Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
+}
+
+// Permitir validación de Hotmart (si envían un GET para probar el endpoint)
+export async function GET() {
+  return NextResponse.json({ status: 'ready' });
 }
