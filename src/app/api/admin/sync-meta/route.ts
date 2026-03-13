@@ -28,12 +28,16 @@ export async function GET(req: Request) {
 
     for (const account of accounts) {
       console.log(`Sincronizando cuenta: ${account.name} para: ${date}`);
+      
+      const adAccountId = account.ad_account_id.startsWith('act_') 
+        ? account.ad_account_id 
+        : `act_${account.ad_account_id}`;
 
       // Llamada a Meta Graph API para esta cuenta específica
-      const url = `https://graph.facebook.com/v19.0/${account.ad_account_id}/insights?` + 
+      const url = `https://graph.facebook.com/v19.0/${adAccountId}/insights?` + 
         new URLSearchParams({
           level: 'ad',
-          fields: 'campaign_id,campaign_name,adset_id,ad_id,ad_name,spend,impressions,clicks',
+          fields: 'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,clicks',
           time_range: JSON.stringify({ since: date, until: date }),
           access_token: account.access_token
         });
@@ -50,6 +54,7 @@ export async function GET(req: Request) {
       const insights = result.data || [];
       
       if (insights.length > 0) {
+        // Obtenemos los thumbnails de los anuncios en este batch para no hacer 1000 llamadas
         const adIds = insights.map((i: any) => i.ad_id).join(',');
         const thumbUrl = `https://graph.facebook.com/v19.0/?ids=${adIds}&fields=ad_name,creative{thumbnail_url}&access_token=${account.access_token}`;
         const thumbRes = await fetch(thumbUrl);
@@ -62,6 +67,7 @@ export async function GET(req: Request) {
             campaign_id: item.campaign_id,
             campaign_name: item.campaign_name,
             adset_id: item.adset_id,
+            adset_name: item.adset_name || 'Conjunto sin nombre',
             ad_id: item.ad_id,
             ad_name: item.ad_name || thumbData[item.ad_id]?.ad_name || 'Anuncio sin nombre',
             thumbnail_url: creativeInfo?.thumbnail_url || null,
@@ -78,6 +84,7 @@ export async function GET(req: Request) {
 
         if (dbError) throw dbError;
 
+        // También actualizamos la tabla de metadatos de anuncios para persistencia a largo plazo
         if (spendData.length > 0) {
           const adMetadata = spendData.map((s: any) => ({
             id: s.ad_id,
