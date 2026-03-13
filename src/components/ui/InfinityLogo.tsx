@@ -6,11 +6,6 @@ export function InfinityLogo({ size = 36 }: { size?: number }) {
   const w = size;
   const h = size * 0.5;
 
-  // Clean mathematical lemniscate (infinity) path using cubic beziers
-  const infinityPath =
-    "M 20,22 C 20,10 8,10 8,22 C 8,34 20,34 40,22 C 60,10 72,10 72,22 C 72,34 60,34 60,22 C 60,10 72,10 72,22 C 72,34 60,34 40,22 C 20,10 8,10 8,22 C 8,34 20,34 20,22 Z";
-
-  // Simpler cleaner version
   const path =
     "M 40,22 C 26,4 4,4 4,22 C 4,40 26,40 40,22 C 54,4 76,4 76,22 C 76,40 54,40 40,22 Z";
 
@@ -25,18 +20,15 @@ export function InfinityLogo({ size = 36 }: { size?: number }) {
         className="overflow-visible"
       >
         <defs>
-          {/* Primary gradient blue→purple→cyan */}
           <linearGradient id="infGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="hsl(220, 90%, 65%)" />
             <stop offset="50%" stopColor="hsl(270, 85%, 60%)" />
             <stop offset="100%" stopColor="hsl(190, 90%, 55%)" />
           </linearGradient>
-          {/* Secondary gradient — shifted hue */}
           <linearGradient id="infGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="hsl(270, 80%, 65%)" />
             <stop offset="100%" stopColor="hsl(220, 90%, 70%)" />
           </linearGradient>
-          {/* Wide soft glow */}
           <filter id="glowWide" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="4" result="b1" />
             <feMerge>
@@ -45,7 +37,6 @@ export function InfinityLogo({ size = 36 }: { size?: number }) {
               <feMergeNode in="b1" />
             </feMerge>
           </filter>
-          {/* Medium glow */}
           <filter id="glowMed" x="-40%" y="-40%" width="180%" height="180%">
             <feGaussianBlur stdDeviation="2" result="b2" />
             <feMerge>
@@ -54,7 +45,6 @@ export function InfinityLogo({ size = 36 }: { size?: number }) {
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
-          {/* Tight glow for the core */}
           <filter id="glowCore" x="-30%" y="-30%" width="160%" height="160%">
             <feGaussianBlur stdDeviation="0.8" result="b3" />
             <feMerge>
@@ -64,7 +54,6 @@ export function InfinityLogo({ size = 36 }: { size?: number }) {
           </filter>
         </defs>
 
-        {/* LAYER 1: Wide outer glow (the "atmosphere") */}
         <motion.path
           d={path}
           stroke="hsl(260, 80%, 55%)"
@@ -77,7 +66,6 @@ export function InfinityLogo({ size = 36 }: { size?: number }) {
           transition={{ duration: 1.6, ease: "easeInOut" }}
         />
 
-        {/* LAYER 2: Secondary trail — offset animation */}
         <motion.path
           d={path}
           stroke="url(#infGrad2)"
@@ -90,7 +78,6 @@ export function InfinityLogo({ size = 36 }: { size?: number }) {
           transition={{ duration: 1.4, ease: "easeInOut", delay: 0.15 }}
         />
 
-        {/* LAYER 3: Main neon stroke */}
         <motion.path
           d={path}
           stroke="url(#infGrad1)"
@@ -102,7 +89,6 @@ export function InfinityLogo({ size = 36 }: { size?: number }) {
           transition={{ duration: 1.5, ease: "easeInOut", delay: 0.1 }}
         />
 
-        {/* LAYER 4: White-hot core */}
         <motion.path
           d={path}
           stroke="white"
@@ -115,7 +101,6 @@ export function InfinityLogo({ size = 36 }: { size?: number }) {
           transition={{ duration: 1.5, ease: "easeInOut", delay: 0.25 }}
         />
 
-        {/* LAYER 5: Orbiting energy pulse */}
         <motion.circle
           r="1.8"
           fill="white"
