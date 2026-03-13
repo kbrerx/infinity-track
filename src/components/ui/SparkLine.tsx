@@ -13,7 +13,7 @@ export function SparkLine({ data, color = "hsl(263.4,70%,60%)", height = 40, wid
   if (!data || data.length < 2) return null;
 
   const min = Math.min(...data);
-  const max = Math.max(...data);
+  const max = Math.max(...max);
   const range = max - min || 1;
 
   const points = data.map((d, i) => {
@@ -26,6 +26,7 @@ export function SparkLine({ data, color = "hsl(263.4,70%,60%)", height = 40, wid
   const lastX = parseFloat(points[points.length - 1]);
   const lastY = parseFloat(points[points.length - 1].split(",")[1]);
 
+  // path for the filled area under the line
   const area = `M 0,${height} L ${points[0].split(",")[0]},${points[0].split(",")[1]} ${points.slice(1).map(p => `L ${p}`).join(" ")} L ${width},${height} Z`;
 
   return (
@@ -44,6 +45,7 @@ export function SparkLine({ data, color = "hsl(263.4,70%,60%)", height = 40, wid
         </filter>
       </defs>
 
+      {/* Fill area */}
       <motion.path
         d={area}
         fill="url(#sparkGrad)"
@@ -52,6 +54,7 @@ export function SparkLine({ data, color = "hsl(263.4,70%,60%)", height = 40, wid
         transition={{ duration: 1, delay: 0.3 }}
       />
 
+      {/* Line */}
       <motion.polyline
         points={polyline}
         fill="none"
@@ -65,6 +68,7 @@ export function SparkLine({ data, color = "hsl(263.4,70%,60%)", height = 40, wid
         transition={{ duration: 1, ease: "easeInOut", delay: 0.1 }}
       />
 
+      {/* Last point dot */}
       <motion.circle
         cx={lastX}
         cy={lastY}
