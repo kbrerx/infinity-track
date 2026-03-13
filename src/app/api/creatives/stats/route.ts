@@ -63,10 +63,10 @@ export async function GET(req: Request) {
           cpc: 0,
           ventas: 0,
           status: "active",
-          fatigue: Math.floor(Math.random() * 20), // Placeholder para lógica de fatiga real
-          fatigueHistory: [5, 5, 6, 7, 8, 9, 10], // Placeholder
-          relevance: 8.5, // Placeholder
-          frequency: 1.2 // Placeholder
+          fatigue: 0,
+          fatigueHistory: [],
+          relevance: 0,
+          frequency: 0
         };
       }
       const cr = creativesMap[s.ad_id];

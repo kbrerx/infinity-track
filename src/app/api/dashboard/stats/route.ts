@@ -100,7 +100,7 @@ export async function GET(req: Request) {
       sales: salesCount,
       cpa: cpa,
       margin: margin,
-      matchQuality: realMatchQuality || 9.5,
+      matchQuality: realMatchQuality || 0,
       pending: 0,
       sources: [
         { label: 'Meta Ads', pct: 100, color: 'hsl(220,90%,60%)' }
