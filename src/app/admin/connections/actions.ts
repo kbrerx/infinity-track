@@ -58,3 +58,29 @@ export async function updatePixel(id: string, domain_filter: string) {
   revalidatePath('/admin/connections');
   return { success: true };
 }
+
+// Acciones para Integraciones (Marketplace)
+export async function addIntegration(formData: FormData) {
+  const name = formData.get('name') as string;
+  const type = formData.get('type') as string;
+  const hottok = formData.get('hottok') as string;
+
+  const { error } = await supabase.from('integrations').insert([
+    { 
+      name, 
+      type, 
+      config: { hottok } 
+    }
+  ]);
+
+  if (error) return { error: error.message };
+  revalidatePath('/admin/connections');
+  return { success: true };
+}
+
+export async function deleteIntegration(id: string) {
+  const { error } = await supabase.from('integrations').delete().eq('id', id);
+  if (error) return { error: error.message };
+  revalidatePath('/admin/connections');
+  return { success: true };
+}

@@ -10,32 +10,24 @@ function hashData(data: string | undefined): string | null {
   return crypto.createHash('sha256').update(cleanData).digest('hex');
 }
 
-interface MetaEventParams {
+export async function sendToCapi({ 
+  eventName, 
+  userData, 
+  customData, 
+  pixelId, 
+  accessToken, 
+  eventId,
+  eventSourceUrl
+}: {
   eventName: string;
-  eventTime: number; // Unix timestamp in seconds
-  eventId?: string;
+  userData: any;
+  customData?: any;
   pixelId?: string;
   accessToken?: string;
-  userData: {
-    email?: string;
-    phone?: string;
-    firstName?: string;
-    lastName?: string;
-    ip?: string;
-    userAgent?: string;
-    fbc?: string;
-    fbp?: string;
-    country?: string;
-  };
-  customData?: {
-    value?: number;
-    currency?: string;
-    orderId?: string;
-    contentName?: string;
-  };
-}
-
-export async function sendEventToMetaCAPI({ eventName, eventTime, userData, customData, pixelId, accessToken, eventId }: MetaEventParams) {
+  eventId?: string;
+  eventSourceUrl?: string;
+}) {
+  const eventTime = Date.now();
   const targetPixelId = pixelId || PIXEL_ID;
   const targetAccessToken = accessToken || ACCESS_TOKEN;
 
@@ -51,6 +43,7 @@ export async function sendEventToMetaCAPI({ eventName, eventTime, userData, cust
         event_time: Math.floor(eventTime / 1000), // Convert to seconds
         event_id: eventId,
         action_source: 'website',
+        event_source_url: eventSourceUrl,
         user_data: {
           em: hashData(userData.email),
           ph: hashData(userData.phone),
@@ -65,8 +58,8 @@ export async function sendEventToMetaCAPI({ eventName, eventTime, userData, cust
         custom_data: {
           value: customData?.value,
           currency: customData?.currency || 'USD',
-          order_id: customData?.orderId,
-          content_name: customData?.contentName,
+          order_id: customData?.transaction_id,
+          content_name: customData?.content_name,
         },
       },
     ],
