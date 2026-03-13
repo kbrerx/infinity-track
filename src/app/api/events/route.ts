@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 // Helper to get real IP
 function getIP(req: Request) {
   const fallbacks = [
@@ -30,21 +32,19 @@ export async function POST(req: Request) {
       fbc,
       fbp,
       user_agent,
-      event_id, // Capturamos el ID de deduplicación
+      event_id,
       metadata
     } = data;
 
     if (!event_type || !session_id || !visitor_id) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
-    // 1. Identificar el InfinityPixel correcto (Multi-Cuenta / Smart Domain)
+    
     const currentHostname = new URL(page_url).hostname;
     const { data: pixels } = await supabase
       .from('meta_pixels')
       .select('pixel_id, access_token, domain_filter');
     
-    // Búsqueda inteligente: coincide exacto o si el hostname termina con el filtro (subdominios)
-    // Ahora permite múltiples dominios separados por coma: "sitio1.com, sitio2.online"
     const activePixel = pixels?.find(px => {
       if (!px.domain_filter) return false;
       const filters = px.domain_filter.split(',').map((f: string) => f.trim().toLowerCase());
@@ -56,11 +56,9 @@ export async function POST(req: Request) {
     const pixel_id = activePixel?.pixel_id;
     const access_token = activePixel?.access_token;
 
-    // 2. Obtener Geografía por IP (Cloudflare/Vercel Headers)
     const ip_address = req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
     const country = req.headers.get('x-vercel-ip-country') || 'Unknown';
 
-    // 3. Registrar en Supabase
     const { error } = await supabase
       .from('events')
       .insert([
@@ -69,7 +67,7 @@ export async function POST(req: Request) {
           session_id,
           visitor_id,
           page_url,
-          pixel_id, // Guardamos qué pixel disparó este hit
+          pixel_id,
           referrer,
           utm_source,
           utm_medium,
@@ -84,22 +82,21 @@ export async function POST(req: Request) {
           country,
           event_id,
           campaign_id: metadata?.campaign_id,
-          adset_id: metadata?.adset_id, // Granulación AdSet
-          ad_id: metadata?.ad_id,       // Granulación Anuncio
+          adset_id: metadata?.adset_id,
+          ad_id: metadata?.ad_id,
           metadata: metadata || {}
         }
       ]);
 
     if (error) throw error;
 
-    // 4. ENVÍO REAL-TIME A META CAPI (Solo eventos de comportamiento)
     if (['PageView', 'InitiateCheckout', 'Lead'].includes(event_type)) {
       const { sendEventToMetaCAPI } = await import('@/lib/meta/capi');
       
       sendEventToMetaCAPI({
         eventName: event_type,
         eventTime: Date.now(),
-        eventId: event_id, // Usamos el ID generado en el navegador
+        eventId: event_id,
         pixelId: pixel_id,
         accessToken: access_token,
         userData: {
@@ -116,7 +113,6 @@ export async function POST(req: Request) {
       }).catch(err => console.error('Error sending behavioral CAPI:', err));
     }
 
-    // CORS headers to allow requests from any landing page
     const headers = new Headers();
     headers.set('Access-Control-Allow-Origin', '*');
     headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
