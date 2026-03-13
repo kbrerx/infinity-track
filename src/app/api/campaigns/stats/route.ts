@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     // 2. Fetch Ad Spend (Meta)
     const { data: spendData, error: sError } = await supabase
       .from('ad_spend')
-      .select('campaign_id, campaign_name, adset_id, adset_name, ad_id, ad_name, spend, impressions, clicks')
+      .select('campaign_id, campaign_name, adset_id, adset_name, ad_id, ad_name, spend, impresiones, clicks')
       .gte('created_at', startDate.toISOString())
       .lte('created_at', end ? new Date(end).toISOString() : now.toISOString());
 
@@ -86,12 +86,14 @@ export async function GET(req: Request) {
           id: s.ad_id, name: s.ad_name, status: 'active',
           spend: 0, revenue: 0, roas: 0, ctr: 0, cpa: 0, clicks: 0,
           pageViews: 0, ic: 0, cpc: 0, cpv: 0, ventas: 0,
-          pvToIc: 0, icToCompra: 0, convRate: 0
+          pvToIc: 0, icToCompra: 0, convRate: 0,
+          thumbnail_url: (s as any).thumbnail_url
         };
       }
       const ad = as.ads[s.ad_id];
       ad.spend += Number(s.spend);
       ad.clicks += Number(s.clicks);
+      ad.impresiones = (ad.impresiones || 0) + Number((s as any).impresiones || 0);
     });
 
     // Añadir Compras
