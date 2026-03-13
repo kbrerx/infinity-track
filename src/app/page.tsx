@@ -1,37 +1,33 @@
 "use client";
 
 import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect, useState } from "react";
 import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
 import {
   TrendingUp, TrendingDown, DollarSign, BarChart3, Target, ShieldCheck,
-  Package, Share2, Clock, Zap, ArrowUpRight
+  Package, Share2, Clock, Zap
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
-
+import FilterBar from "@/components/dashboard/FilterBar";
 
 // ---- Animation variants ----
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.07 } } };
 const fadeUp = { hidden: { opacity: 0, y: 30, filter: "blur(6px)" }, show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const } } };
 
 // ==========================================
-// 3D TILT GLOW CARD (the star of the show)
+// 3D TILT GLOW CARD
 // ==========================================
 function TiltCard({ children, className = "", accent = false }: { children: React.ReactNode; className?: string; accent?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const mx = useMotionValue(0.5);
   const my = useMotionValue(0.5);
 
-  // Smooth follow
   const smoothX = useSpring(mx, { stiffness: 300, damping: 30 });
   const smoothY = useSpring(my, { stiffness: 300, damping: 30 });
 
-  // 3D rotation
   const rotateX = useTransform(smoothY, [0, 1], [4, -4]);
   const rotateY = useTransform(smoothX, [0, 1], [-4, 4]);
 
-  // Mouse glow position
   const glowX = useTransform(smoothX, [0, 1], [0, 100]);
   const glowY = useTransform(smoothY, [0, 1], [0, 100]);
   const glowBg = useTransform(
@@ -61,16 +57,13 @@ function TiltCard({ children, className = "", accent = false }: { children: Reac
       style={{ rotateX, rotateY, transformPerspective: 800 }}
       className={`relative cursor-default ${accent ? "glass-card-accent" : "glass-card"} ${className}`}
     >
-      {/* Cursor glow */}
       <motion.div className="absolute inset-0 rounded-2xl pointer-events-none z-0" style={{ background: glowBg }} />
-      {/* Top edge shimmer */}
       <div className="absolute top-0 left-0 right-0 h-[1px]">
         <div className={accent
           ? "h-full edge-glow-blue opacity-60"
           : "h-full bg-gradient-to-r from-transparent via-white/[0.06] to-transparent"}
         />
       </div>
-      {/* Card scan line animation on accent */}
       {accent && <div className="card-scan-line" />}
       <div className="relative z-10">{children}</div>
     </motion.div>
@@ -112,9 +105,6 @@ function Metric({ label, value, prefix = "", suffix = "", decimals = 2, delta, d
   );
 }
 
-// ==========================================
-// ANIMATED SOURCE BAR
-// ==========================================
 function SourceBar({ label, pct, color, delay = 0 }: { label: string; pct: number; color: string; delay?: number }) {
   return (
     <div className="space-y-1.5">
@@ -135,9 +125,6 @@ function SourceBar({ label, pct, color, delay = 0 }: { label: string; pct: numbe
   );
 }
 
-// ==========================================
-// SVG GLOWING RING (Match Quality indicator)
-// ==========================================
 function GlowRing({ value, max = 10, size = 80 }: { value: number; max?: number; size?: number }) {
   const radius = (size - 8) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -155,9 +142,7 @@ function GlowRing({ value, max = 10, size = 80 }: { value: number; max?: number;
             </feMerge>
           </filter>
         </defs>
-        {/* Background track */}
         <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="hsla(220,20%,100%,0.06)" strokeWidth="4" />
-        {/* Animated progress */}
         <motion.circle
           cx={size / 2} cy={size / 2} r={radius} fill="none"
           stroke="url(#ringGrad)" strokeWidth="4" strokeLinecap="round"
@@ -181,12 +166,6 @@ function GlowRing({ value, max = 10, size = 80 }: { value: number; max?: number;
     </div>
   );
 }
-
-// ==========================================
-// MAIN DASHBOARD PAGE
-// ==========================================
-import FilterBar, { TimeRange } from "@/components/dashboard/FilterBar";
-import { useEffect, useState } from "react";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<any>(null);
@@ -212,8 +191,6 @@ export default function DashboardPage() {
 
   return (
     <motion.div initial="hidden" animate="show" variants={container} className="flex flex-col gap-6 pb-16">
-
-      {/* ===== HEADER ===== */}
       <motion.div variants={fadeUp} className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pt-2 relative z-50">
         <div>
           <h1 className="text-4xl font-black tracking-tighter text-glow leading-none">
@@ -224,11 +201,9 @@ export default function DashboardPage() {
             INFINITYTRACK · Atribución Server-Side · CAPI v16.0
           </p>
         </div>
-        
         <FilterBar onFilterChange={fetchStats} />
       </motion.div>
 
-      {/* ===== BENTO ROW 1 — Hero Metrics ===== */}
       <div className="grid grid-cols-2 md:grid-cols-12 gap-4">
         <div className="col-span-2 md:col-span-5">
           <Metric label="Facturación Neta" value={stats?.revenue || 0} prefix="$"
@@ -253,7 +228,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ===== BENTO ROW 2 — Operations ===== */}
       <div className="grid grid-cols-2 md:grid-cols-12 gap-4">
         <div className="col-span-1 md:col-span-3">
           <Metric label="Gasto Anuncios" value={stats?.spend || 0} prefix="$"
@@ -274,7 +248,6 @@ export default function DashboardPage() {
                   transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
                 />
               </div>
-
             </div>
           </TiltCard>
         </div>
@@ -298,9 +271,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ===== BENTO ROW 3 — Intelligence + Match Quality ===== */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-        {/* Ventas por Fuente */}
         <motion.div variants={fadeUp} className="md:col-span-4">
           <div className="glass-card p-6 h-full">
             <div className="flex items-center gap-2 mb-6">
@@ -314,14 +285,9 @@ export default function DashboardPage() {
                 <p className="text-[10px] text-muted-foreground italic">Sin datos de fuentes...</p>
               )}
             </div>
-            <div className="mt-6 pt-4 border-t border-white/5 flex justify-between items-center">
-              <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Total</span>
-              <span className="text-xl font-black text-glow">{stats?.sales || 0}</span>
-            </div>
           </div>
         </motion.div>
 
-        {/* Ventas por Producto */}
         <motion.div variants={fadeUp} className="md:col-span-6">
           <div className="glass-card p-6 h-full">
             <div className="flex items-center justify-between mb-5">
@@ -329,9 +295,6 @@ export default function DashboardPage() {
                 <div className="p-2 bg-primary/10 rounded-xl"><Package className="w-4 h-4 text-primary" /></div>
                 <div><h3 className="text-sm font-black">Ventas por Producto</h3><p className="text-[10px] text-muted-foreground">Desglose funnel</p></div>
               </div>
-              <Badge variant="outline" className="text-[9px] border-white/10 uppercase tracking-widest hidden sm:block">
-                Todas las fuentes
-              </Badge>
             </div>
             <div className="space-y-1">
               {stats?.products?.length > 0 ? (
@@ -341,24 +304,13 @@ export default function DashboardPage() {
                     transition={{ delay: 0.4 + i * 0.08 }}
                     className={`flex items-center gap-3 p-2.5 rounded-xl group transition-colors ${prod.main ? "bg-primary/[0.06] border border-primary/15" : "hover:bg-white/[0.02]"}`}
                   >
-                    <div className={`w-1 h-7 rounded-full shrink-0 ${prod.main ? "bg-primary" : "bg-white/10 group-hover:bg-white/20"}`} />
                     <div className="flex-1 min-w-0">
-                      <p className={`text-[13px] font-bold truncate ${prod.main ? "" : "text-muted-foreground group-hover:text-foreground"}`}>{prod.n}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <div className="h-1 flex-1 bg-white/5 rounded-full overflow-hidden">
-                          <motion.div className={`h-full rounded-full ${prod.main ? "bg-primary" : "bg-white/15"}`}
-                            initial={{ width: 0 }} animate={{ width: `${prod.p}%` }}
-                            transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.5 + i * 0.1 }}
-                          />
-                        </div>
-                        <span className="text-[9px] text-muted-foreground font-mono shrink-0">{prod.p.toFixed(1)}%</span>
-                      </div>
+                      <p className={`text-[13px] font-bold truncate ${prod.main ? "" : "text-muted-foreground"}`}>{prod.n}</p>
                     </div>
                     <div className="text-right shrink-0">
                       <span className="text-sm font-black">${prod.r.toLocaleString()}</span>
                       <p className="text-[9px] text-muted-foreground">{prod.q} uds</p>
                     </div>
-                    {prod.main && <Badge className="bg-primary/15 text-primary border-none text-[8px] font-black uppercase shrink-0 hidden sm:flex">Top</Badge>}
                   </motion.div>
                 ))
               ) : (
@@ -371,7 +323,6 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
-        {/* Match Quality Ring */}
         <motion.div variants={fadeUp} className="md:col-span-2">
           <div className="glass-card p-5 h-full flex flex-col items-center justify-center gap-4">
             <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Match Quality</span>
@@ -379,7 +330,6 @@ export default function DashboardPage() {
             <Badge className="bg-emerald-500/15 text-emerald-500 border-none text-[9px] font-black uppercase">
               EMQ Superior
             </Badge>
-            <p className="text-[9px] text-muted-foreground text-center leading-relaxed">PII Hash: em + ph + ip + fbc + fbp</p>
           </div>
         </motion.div>
       </div>
